@@ -1,4 +1,4 @@
-# geocodeCsvToGpx
+# geocode_csv_to_gpx
 
 Convert addresses from a CSV file to a GPX file.
 
@@ -24,7 +24,7 @@ Note: all indices (columns, lines) start at 1.
 
 Read CSV file `input.csv`, obtain name from column `6`, obtain address from column `3` and `7` (will use `,` as separator), obtain description from column `11` and write results to `places.gpx`.
 ```
-./geocodeCsvToGpx.py -n 6 -a 3 7 -d 11 -o places.gpx input.csv
+./geocode_csv_to_gpx.py -n 6 -a 3 7 -d 11 -o places.gpx input.csv
 ```
 
 # License

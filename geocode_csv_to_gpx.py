@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-#
-# read addresses from CSV, use a geocoder to obtain their coordinates
-# and write them to a GPX file
-#
+"""read addresses from CSV, use a geocoder to obtain their coordinates
+and write them to a GPX file
+"""
 
 import argparse
 import csv
@@ -10,7 +9,6 @@ import json
 import sys
 import urllib.request
 
-from collections import namedtuple
 from dataclasses import dataclass, field
 from xml.sax.saxutils import escape
 
@@ -57,7 +55,7 @@ class GeocodeCsvToGPX:
     dryrun: bool = False
     verbose: bool = False
     places: list = field(default_factory=list)
-    
+
     def run(self):
         """Perform all the magic"""
 
@@ -76,7 +74,7 @@ class GeocodeCsvToGPX:
         if self.verbose:
             print(f'Obtaining coordinates for {len(self.places)} places')
         self.get_coordinates()
-        
+
         if self.verbose:
             print('Writing GPX file')
         self.write_places_to_gpx()
@@ -89,7 +87,6 @@ class GeocodeCsvToGPX:
             for lineno, columns in enumerate(
                     csv.reader(file, skipinitialspace=True), start=1):
                 if self.skip_first_lines and lineno <= self.skip_first_lines:
-                    first = False
                     continue
                 place = self.get_place_from_line(columns, lineno)
                 if place:
@@ -99,18 +96,19 @@ class GeocodeCsvToGPX:
 
     def get_place_from_line(self, columns, lineno):
         """Parse place from single line from CSV file"""
-        
+
         if 0 == len(columns):
             return None
-        
+
         # obtain place information from columns
         addr = self.get_columns(columns, self.addr_cols, ', ')
         name = self.get_columns(columns, self.name_cols, ' ')
         desc = self.get_columns(columns, self.desc_cols, ', ')
-        
+
         # validate place information
         if not name or not addr:
-            print(f'Skipping place from line number {lineno} without name ({name}) or address ({addr})')
+            print(f'Skipping place from line number {lineno} without '
+                  f'name ({name}) or address ({addr})')
             return None
 
         return Place(lineno=lineno, addr=addr, name=name, desc=desc)
@@ -134,9 +132,6 @@ class GeocodeCsvToGPX:
 
     def get_coordinates(self):
         """Add coordinates to all places"""
-        
-        # OSM-based geocoder Photon
-        geocoder = 'https://photon.komoot.io/api/?q=%s&limit=1'
 
         for place in self.places:
             # try to geocode 'name, address'
@@ -148,9 +143,9 @@ class GeocodeCsvToGPX:
                 print(f'Could not obtain coordinates for place {place.name} from '
                       f'line number {place.lineno} with address: {place.addr}')
                 continue
-            
+
             place.coords = coords
-    
+
     def geocode_address(self, address):
         """Obtain coordinates for given address
         Return tuple of longitude, latitude or None if geocoding fails
@@ -162,7 +157,7 @@ class GeocodeCsvToGPX:
         try:
             if self.verbose:
                 print(f'Performing geocoding for address {address}')
-            
+
             request = urllib.request.Request(
                 url=geocoder % urllib.parse.quote(address),
                 headers={'User-Agent': 'geocodeCsvToGpx/1.0'})
@@ -173,12 +168,11 @@ class GeocodeCsvToGPX:
                     if self.verbose:
                         print(f'Coordinates: {coords}')
                     return coords
-        except Exception as e:
-            print(f'Geocoding for address {address} failed: {e}')
-        
+        except Exception as ex:
+            print(f'Geocoding for address {address} failed: {ex}')
+
         # no result
         return None
-        
 
     def xml_escape(self, text):
         """Escape text to valid XML"""
@@ -192,31 +186,32 @@ class GeocodeCsvToGPX:
     def write_places_to_gpx(self):
         """Write all places with their coordinates to a GPX file"""
 
-        with open('out.gpx', 'w', encoding='utf-8') as f:
+        with open(self.outfile, 'w', encoding='utf-8') as file:
             # write GPX header
-            f.write(
+            file.write(
                 '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n'
                 '<gpx version="1.1">\n'
             )
-            
+
             # write places as GPX waypoints
             for place in self.places:
                 if not place.coords:
                     # geocoding failed previously
                     continue
 
-                f.write(
-                    '  <wpt lon="%s" lat="%s">\n'
-                    '    <name>%s</name>\n'
-                    % (place.coords[0], place.coords[1], self.xml_escape(place.name)))
+                file.write(
+                    f'  <wpt lon="{place.coords[0]}" lat="{place.coords[1]}">\n'
+                    f'    <name>{self.xml_escape(place.name)}</name>\n')
                 if place.desc:
-                    f.write('    <desc>%s</desc>\n' % self.xml_escape(place.desc))
-                f.write('  </wpt>\n')
-            
+                    file.write(f'    <desc>{self.xml_escape(place.desc)}</desc>\n')
+                file.write('  </wpt>\n')
+
             # write GPX trailer
-            f.write('</gpx>\n')
+            file.write('</gpx>\n')
 
 def main() -> int:
+    """main"""
+
     parser = argparse.ArgumentParser(
         prog='Geocode CSV to GPX',
         description='read addresses from CSV, use a geocoder to obtain'
@@ -239,11 +234,11 @@ def main() -> int:
         help='print debugging information')
 
     args = parser.parse_args()
-    
+
     converter = GeocodeCsvToGPX(args.files, args.outfile, args.address, args.name,
         args.desc, args.skip_first_lines, args.dry_run, args.verbose)
     converter.run()
-    
+
     return 0
 
 if __name__ == '__main__':
