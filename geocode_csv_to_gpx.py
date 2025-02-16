@@ -7,6 +7,7 @@ import argparse
 import csv
 import json
 import sys
+import time
 import urllib.request
 
 from dataclasses import dataclass, field
@@ -161,12 +162,14 @@ class GeocodeCsvToGPX:
             request = urllib.request.Request(
                 url=geocoder % urllib.parse.quote(address),
                 headers={'User-Agent': 'geocodeCsvToGpx/1.0'})
+            t_start = time.perf_counter()
             with urllib.request.urlopen(request) as response:
                 data = json.load(response)
+                t_end = time.perf_counter()
                 if data['features']:
                     coords = data['features'][0]['geometry']['coordinates']
                     if self.verbose:
-                        print(f'Coordinates: {coords}')
+                        print(f'Coordinates: {coords} (took {(t_end - t_start):.2f} seconds)')
                     return coords
         except Exception as ex:
             print(f'Geocoding for address {address} failed: {ex}')
